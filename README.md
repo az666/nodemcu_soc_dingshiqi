@@ -1,0 +1,2 @@
+# nodemcu_soc_dingshiqi
+机智云开发之SOC方案的实现远程控制设备定时触发
