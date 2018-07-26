@@ -24,28 +24,6 @@ bool isTimer;
 long timer_timers;
 long time_mills;//定义总秒数
 static os_timer_t os_timer;
-
-/**@name Gizwits User Interface
-* @{
-*/
-
-/**
-* @brief Event handling interface
-
-* Description:
-
-* 1. Users can customize the changes in WiFi module status
-
-* 2. Users can add data points in the function of event processing logic, such as calling the relevant hardware peripherals operating interface
-
-* @param [in] info: event queue
-* @param [in] data: protocol data
-* @param [in] len: protocol data length
-* @return NULL
-* @ref gizwits_protocol.h
-*/
-
-
 /**
  * 定时任务函数
  */
@@ -54,6 +32,13 @@ void Led_Task_Run(void){
  GPIO_OUTPUT_SET(GPIO_ID_PIN(12), 0);
  //执行完毕，我们要把定时时间设置0 ,定时使能状态为false
  timer_timers=0;         //根据继电器的种类和要定时的任务而定。这是低电平触发继电器的定时开机功能。
+ isTimer=false;
+}
+void Led_Task_Off(void){
+//开灯
+ GPIO_OUTPUT_SET(GPIO_ID_PIN(12), 1);
+ //执行完毕，我们要把定时时间设置0 ,定时使能状态为false
+ timer_timers=0;         //根据继电器的种类和要定时的任务而定。这是低电平触发继电器的定时关机功能。
  isTimer=false;
 }
 int8_t ICACHE_FLASH_ATTR gizwitsEventProcess(eventInfo_t *info, uint8_t *data, uint32_t len)
@@ -107,17 +92,32 @@ int8_t ICACHE_FLASH_ATTR gizwitsEventProcess(eventInfo_t *info, uint8_t *data, u
             currentDataPoint.valuetime_m= dataPointPtr->valuetime_m;
             GIZWITS_LOG("Evt:EVENT_time_m %d\n",currentDataPoint.valuetime_m);
             if(isTimer){
-                /** 关闭该定时器 */
-             os_timer_disarm( &os_timer );
-            // 配置该定时器回调函数，指定的执行方法是： Led_Task_Run （），下面会提供代码
-             os_timer_setfn( &os_timer, (ETSTimerFunc *) ( Led_Task_Run ), NULL );
-             time_mills = (currentDataPoint.valuetime_h *60 + currentDataPoint.valuetime_m)*60000;
-          /** 开启该定时器 ：下发的是秒数，这里的单位是毫秒，要乘1000* ，后面false表示仅仅执行一次**/
-         //os_timer_arm( &os_timer, currentDataPoint.valuetime_m*1000, false );
-             os_timer_arm( &os_timer, time_mills, false );
-     /**赋值给timer_timers，方便会调用 */
-           timer_timers=currentDataPoint.valuetime_m;
-                                      }
+            	if (currentDataPoint.valueon_off){  //判断继电器状态，如果原来是关闭状态，就定时开机，如果原来是开启状态，就定时关闭。
+            		 /** 关闭该定时器 */
+            		os_timer_disarm( &os_timer );
+            		// 配置该定时器回调函数，指定的执行方法是： Led_Task_Run （），下面会提供代码
+            		os_timer_setfn( &os_timer, (ETSTimerFunc *) ( Led_Task_Off ), NULL );
+            		time_mills = (currentDataPoint.valuetime_h *60 + currentDataPoint.valuetime_m)*60000;
+            		/** 开启该定时器 ：下发的是秒数，这里的单位是毫秒，要乘1000* ，后面false表示仅仅执行一次**/
+            		//os_timer_arm( &os_timer, currentDataPoint.valuetime_m*1000, false );
+            		os_timer_arm( &os_timer, time_mills, false );
+            		/**赋值给timer_timers，方便会调用 */
+            		timer_timers=currentDataPoint.valuetime_m;
+            	}
+            	else
+            	{
+            		/** 关闭该定时器 */
+            		os_timer_disarm( &os_timer );
+            	    // 配置该定时器回调函数，指定的执行方法是： Led_Task_Run （），下面会提供代码
+            		os_timer_setfn( &os_timer, (ETSTimerFunc *) ( Led_Task_Run ), NULL );
+            		time_mills = (currentDataPoint.valuetime_h *60 + currentDataPoint.valuetime_m)*60000;
+            		/** 开启该定时器 ：下发的是秒数，这里的单位是毫秒，要乘1000* ，后面false表示仅仅执行一次**/
+            		//os_timer_arm( &os_timer, currentDataPoint.valuetime_m*1000, false );
+            	    os_timer_arm( &os_timer, time_mills, false );
+            		/**赋值给timer_timers，方便会调用 */
+            		timer_timers=currentDataPoint.valuetime_m;
+            	}
+                }
             break;
 
         case WIFI_SOFTAP:
